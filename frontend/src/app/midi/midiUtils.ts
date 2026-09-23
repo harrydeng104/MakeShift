@@ -1,17 +1,17 @@
 import MidiWriter from "midi-writer-js";
 
-// fix for typescript note knowing the MidiWriter types
-type MidiTrack = {
-  setTempo(bpm: number): void;
-  addEvent(event: unknown): void;
-};
-
-let track: MidiTrack | null = null;
-
+let track: InstanceType<typeof MidiWriter.Track> | null = null;
 let recordingStartTime = 0;
 let recordingBpm = 120;
 
-function millisecondsToTicks(
+type ActiveNote = {
+  startTick: number;
+  velocity: number;
+};
+
+const activeNotes = new Map<string, ActiveNote>();
+
+export function millisecondsToTicks(
   milliseconds: number,
   bpm: number
 ): number {
@@ -19,11 +19,11 @@ function millisecondsToTicks(
 }
 
 export function startRecording(bpm: number): void {
-  const newTrack = new MidiWriter.Track();
+  track = new MidiWriter.Track();
+  track.setTempo(bpm);
 
-  newTrack.setTempo(bpm);
+  activeNotes.clear();
 
-  track = newTrack;
   recordingBpm = bpm;
   recordingStartTime = performance.now();
 }
@@ -36,21 +36,19 @@ export function noteOn(
     return;
   }
 
-  const elapsedTime =
-    performance.now() - recordingStartTime;
+  if (activeNotes.has(pitch)) {
+    return;
+  }
 
-  const tick = millisecondsToTicks(
-    elapsedTime,
-    recordingBpm
-  );
+  console.log("midi note one");
 
-  track.addEvent(
-    new MidiWriter.NoteOnEvent({
-      pitch,
-      velocity,
-      tick,
-    })
-  );
+  const elapsedTime = performance.now() - recordingStartTime;
+  const startTick = millisecondsToTicks(elapsedTime, recordingBpm);
+
+  activeNotes.set(pitch, {
+    startTick,
+    velocity,
+  });
 }
 
 export function noteOff(pitch: string): void {
@@ -58,23 +56,60 @@ export function noteOff(pitch: string): void {
     return;
   }
 
-  const elapsedTime =
-    performance.now() - recordingStartTime;
+  const activeNote = activeNotes.get(pitch);
 
-  const tick = millisecondsToTicks(
-    elapsedTime,
-    recordingBpm
-  );
+  if (activeNote === undefined) {
+    return;
+  }
+
+  console.log("midi note off");
+
+  const elapsedTime = performance.now() - recordingStartTime;
+  const endTick = millisecondsToTicks(elapsedTime, recordingBpm);
+
+  const duration = endTick - activeNote.startTick;
 
   track.addEvent(
-    new MidiWriter.NoteOffEvent({
+    new MidiWriter.NoteEvent({
       pitch,
-      tick,
+      velocity: activeNote.velocity,
+      tick: activeNote.startTick,
+      duration: `T${duration}`,
     })
   );
+
+  activeNotes.delete(pitch);
 }
 
-// a bug exists where if the last note was not released when the recording is stopped, it will note be recorded
+/** Close every note currently held by the live CV session. */
+export function releaseAllNotes(): void {
+  for (const pitch of activeNotes.keys()) noteOff(pitch);
+}
+
+export function stopRecording(): void {
+  if (track === null) {
+    return;
+  }
+
+  const elapsedTime = performance.now() - recordingStartTime;
+  const endTick = millisecondsToTicks(elapsedTime, recordingBpm);
+
+  for (const [pitch, activeNote] of activeNotes) {
+    const duration = endTick - activeNote.startTick;
+
+    track.addEvent(
+      new MidiWriter.NoteEvent({
+        pitch,
+        velocity: activeNote.velocity,
+        tick: activeNote.startTick,
+        duration: `T${duration}`,
+      })
+    );
+  }
+
+  activeNotes.clear();
+}
+
 export function downloadMidi(): void {
   if (track === null) {
     return;
