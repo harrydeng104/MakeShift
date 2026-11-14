@@ -165,14 +165,33 @@ try {
   await page.waitForFunction(() => window.probeCompletion !== null);
   assert.deepEqual(await page.evaluate(() => window.timelineProbe.map(event => event.beat)), [1, 2, 3, 4, null]);
   await page.evaluate(() => window.startTimelineProbe());
-  await page.waitForFunction(() => window.probeStart !== null &&
-    window.clickContext.getOutputTimestamp().contextTime >= window.probeStart + 0.55);
-  const afterStall = await page.evaluate(() => {
-    window.beforeProbeStall = window.timelineProbe.length;
-    const end = performance.now() + 450;
-    while (performance.now() < end) { /* Cross completion with no UI callbacks. */ }
-    return window.beforeProbeStall;
-  });
+  const afterStall = await page.evaluate(() => new Promise((resolve, reject) => {
+    const deadline = performance.now() + 5000;
+    function check() {
+      if (performance.now() > deadline) {
+        reject(new Error("Timed out waiting to start the count-in stall"));
+        return;
+      }
+      const start = window.probeStart;
+      const outputTime = window.clickContext.getOutputTimestamp().contextTime;
+      if (start === null || outputTime < start + 0.55) {
+        requestAnimationFrame(check);
+        return;
+      }
+      // At 300 BPM, beat 3 starts at 400 ms and beat 4 at 600 ms.
+      const lastBeat = window.timelineProbe.at(-1)?.beat;
+      if (lastBeat !== 3 || outputTime >= start + 0.6) {
+        reject(new Error("The stall did not begin before beat 4"));
+        return;
+      }
+      // Start the stall in the same task that verifies the timing threshold.
+      const index = window.timelineProbe.length;
+      const end = performance.now() + 450;
+      while (performance.now() < end) { /* Cross completion with no UI callbacks. */ }
+      resolve(index);
+    }
+    check();
+  }));
   await page.waitForFunction(() => window.probeCompletion !== null);
   const probe = await page.evaluate(index => ({
     tail: window.timelineProbe.slice(index).map(event => event.beat),

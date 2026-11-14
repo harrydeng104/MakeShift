@@ -2309,6 +2309,61 @@ passed. No production build or browser test was run for this test-only phase.
 
 ## Count-in synchronization verification (#225)
 
+### PR #266 first-beat review fix (2026-11-13)
+
+The controller now waits for the output clock to reach the scheduled first
+beat before reporting a countdown number. Home uses zero as a pending count-in
+state, retaining the overlay, disabled Record/settings and available Stop while
+withholding the animated number. Start and Resume both use this state.
+
+A controller regression simulates buffered output before the first beat,
+checks first-beat notification at the boundary and cancels a queued visual
+callback on Stop. Two Home integration cases cover pending Start/Resume,
+first notification and Stop while waiting. Existing meter and storage tests
+now wait for simulated beat delivery before expecting an animated number.
+Local Windows verification: 785 tests passed, one existing skip across 40
+files; lint, TypeScript, all 37 contrast pairs, production build and
+`git diff --check` passed. Browser and physical-device checks have not been
+rerun for this follow-up; no new Actions execution is claimed. The two other
+review requests about delayed callback and browser-stall fixtures were still
+open at the end of this first-fix verification.
+
+### PR #266 delayed completion review fix (2026-11-13)
+
+The simulated audio transport now has an optional animation-callback delivery
+hook alongside worklet-message delivery. The Start/Resume timestamp regression
+holds both paths from 600 ms until 1000 ms, past the 800 ms count-in boundary.
+Before releasing callbacks it checks the actual recorder remains stopped or
+paused, the overlay is present, and both callback queues are nonempty. After
+release it checks the recorder is recording and retains the existing note
+offset assertions (200 ms for Start, 300 ms for Resume).
+
+All 63 recording-controls tests passed with one existing skip. A controlled
+mutation temporarily removed Home's scheduled Start/Resume timestamp arguments:
+both regressions failed at their note-offset assertions (0 instead of 200 ms,
+100 instead of 300 ms). The source was restored immediately. This demonstrates
+the updated cases detect callback-time timestamps. After restoration, the full
+suite passed (785 tests, one existing skip across 40 files), along with lint
+and TypeScript. New Actions evidence remains pending.
+
+### PR #266 browser-stall review fix (2026-11-13)
+
+The production browser probe now detects its 550 ms output-clock threshold,
+asserts beat 3 was the last displayed beat and that beat 4 has not started,
+then blocks for 450 ms in that same browser task. There is no intervening
+Playwright round trip. It retains assertions that completion is the only
+post-stall notification and carries an earlier scheduled audio boundary.
+
+Chromium 151.0.7922.34 passed the updated probe against the local production
+build containing the first-beat fix: idle callbacks were ordered at 300 BPM,
+no stale beat followed the stall, and the completion boundary preceded callback
+receipt by approximately 211.6 ms. Existing busy-thread click spacing remained
+within one sample of 500 ms; pause/mute, resume, standalone Home with camera
+denied, and cleanup/reuse also passed. Targeted browser-test lint and
+`git diff --check` passed. These are digital audio/controller checks; no new
+physical listening or camera validation, other-browser result or Actions
+execution is claimed.
+
 Local implementation verification 2026-11-05. The processor reports sample-frame
 count-in metadata; the controller derives current progress from audio output
 position, samples on animation frames and emits only changed current beats.

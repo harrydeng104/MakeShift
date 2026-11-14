@@ -4,6 +4,7 @@ import type { createMetronome } from "../../frontend/src/app/audio/metronome";
 type Output = {
   prepare(): Promise<boolean>;
   deliver?(notification: () => void): void;
+  deliverFrame?(notification: () => void): void;
   click(accent: boolean): void;
   silence(): void;
   close(): void;
@@ -87,7 +88,11 @@ export function createSimulatedMetronome(
     (context) =>
       (context as unknown as { testNode: AudioWorkletNode }).testNode,
     {
-      request: callback => setTimeout(() => callback(performance.now()), 16) as unknown as number,
+      request: callback => setTimeout(() => {
+        const notify = () => callback(performance.now());
+        if (output.deliverFrame) output.deliverFrame(notify);
+        else notify();
+      }, 16) as unknown as number,
       cancel: id => clearTimeout(id),
     },
   );

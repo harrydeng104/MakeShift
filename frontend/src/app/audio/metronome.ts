@@ -82,11 +82,13 @@ export function createMetronome(
       callbacks.onCountInComplete(boundaryMs);
       return;
     }
-    const beat = Math.max(1, Math.min(timeline.beats,
-      Math.floor((position * timeline.rate - timeline.start) / timeline.interval + 1e-7) + 1));
-    if (beat !== displayedBeat) {
-      displayedBeat = beat;
-      callbacks.onCountInBeat(beat);
+    if (position >= timeline.start / timeline.rate) {
+      const beat = Math.min(timeline.beats,
+        Math.floor((position * timeline.rate - timeline.start) / timeline.interval + 1e-7) + 1);
+      if (beat !== displayedBeat) {
+        displayedBeat = beat;
+        callbacks.onCountInBeat(beat);
+      }
     }
     if (visualFrame === null) {
       const version = generation;

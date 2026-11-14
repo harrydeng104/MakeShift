@@ -269,7 +269,7 @@ export default function Home() {
   useDialogFocus(calibrationIntroRef, showCalibrationIntro, () => setShowCalibrationIntro(false));
 
   // ── Recording state machine ──────────────────────────────────────────────
-  //   countInBeat      → 1 … beatsPerMeasure (one measure count-in), then recording
+  //   countInBeat      → 0 pending, then 1 … beatsPerMeasure, then recording
   //   isRecording      → actively recording (or paused)
   //   isPaused         → recording paused mid-session
   //   hasRecordings → stop pressed; MIDI controls visible
@@ -489,7 +489,7 @@ export default function Home() {
     if (isRecording && isPaused) {
       // Keep the existing take paused until the count-in finishes.
       countInActionRef.current = "resume";
-      setCountInBeat(1);
+      setCountInBeat(0);
       metronomeController.setPlaying(true, true);
       metronomeController.beginCountIn();
       return;
@@ -498,7 +498,7 @@ export default function Home() {
     setRecordingState(recorder.getState());
     setShowRecordingComplete(false);
     countInActionRef.current = "start";
-    setCountInBeat(1);
+    setCountInBeat(0);
     metronomeController.setPlaying(true);
     metronomeController.beginCountIn();
   };
@@ -743,14 +743,14 @@ export default function Home() {
           {countInBeat !== null && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-dark/60 z-40 pointer-events-none">
               <p className="text-white">Piano paused for count-in · Stop to cancel</p>
-              <span
+              {countInBeat > 0 && <span
                 key={countInBeat}
                 className="ms-beat font-display text-white font-bold leading-none tabular-nums"
                 style={{ fontSize: "clamp(80px,20vw,160px)",
                   animationDuration: `${Math.min(120, 120000 / (tempo * meter.denominator))}ms` }}
               >
                 {countInBeat}
-              </span>
+              </span>}
               <div className="flex flex-wrap justify-center max-w-[240px] items-center gap-2.5 mt-6">
                 {Array.from({ length: beatsPerMeasure }, (_, i) => (
                   <div

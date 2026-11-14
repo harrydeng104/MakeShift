@@ -265,6 +265,69 @@ it("does not let a retired module failure close a newer successful preparation",
   clock.close();
 });
 
+it("waits for the first output beat and cancels pending visuals on Stop", async () => {
+  const pending = new Map<number, FrameRequestCallback>();
+  let id = 0;
+  let outputTime = 0;
+  const context = {
+    state: "running", currentTime: 0.2, destination: {}, onstatechange: null,
+    audioWorklet: { addModule: vi.fn(async () => {}) },
+    getOutputTimestamp: () => ({ contextTime: outputTime, performanceTime: 1000 }),
+    close: vi.fn(async () => {}),
+  };
+  const node = {
+    port: { onmessage: null as null | ((event: { data: object }) => void), postMessage: vi.fn(), close: vi.fn() },
+    connect: vi.fn(), disconnect: vi.fn(), onprocessorerror: null,
+  };
+  const clock = createMetronome(() => context as unknown as AudioContext,
+    () => node as unknown as AudioWorkletNode, {
+      request: callback => { pending.set(++id, callback); return id; },
+      cancel: handle => { pending.delete(handle); },
+    });
+  const beat = vi.fn(), complete = vi.fn();
+  clock.configure({ tempo: 300, beatsPerMeasure: 4, audible: true }, {
+    onCountInBeat: beat, onCountInComplete: complete, onUnavailable() {},
+  });
+  await clock.prepare();
+  clock.setPlaying(true);
+  const begin = () => {
+    clock.beginCountIn();
+    const generation = node.port.postMessage.mock.calls.at(-1)![0].generation;
+    node.port.onmessage!({ data: { type: "beat", beat: 1, generation, frame: 4800,
+      rate: 48000, countStartFrame: 4800, countIntervalFrames: 9600, countTotal: 4 } });
+  };
+  const frame = () => {
+    const callback = pending.values().next().value!;
+    pending.clear();
+    callback(0);
+  };
+  begin();
+  expect(beat).not.toHaveBeenCalled();
+  outputTime = 0.099;
+  frame();
+  expect(beat).not.toHaveBeenCalled();
+  expect(pending.size).toBe(1);
+  outputTime = 0.1;
+  frame();
+  expect(beat).toHaveBeenCalledExactlyOnceWith(1);
+  frame();
+  expect(beat).toHaveBeenCalledOnce();
+
+  clock.stop();
+  beat.mockClear();
+  outputTime = 0;
+  clock.setPlaying(true);
+  begin();
+  const staleFrame = pending.values().next().value!;
+  clock.stop();
+  expect(pending.size).toBe(0);
+  outputTime = 0.1;
+  staleFrame(0);
+  expect(beat).not.toHaveBeenCalled();
+  expect(complete).not.toHaveBeenCalled();
+  clock.close();
+});
+
 it.each([20, 120, 300])("uses the audio timeline at %i BPM without replaying queued beats", async tempo => {
   const pending = new Map<number, FrameRequestCallback>();
   let id = 0;
