@@ -2310,4 +2310,6 @@ action's default runtime scope; they do not verify this expanded configuration.
 The controlled vulnerable-update rejection test remains skipped by author
 decision, as recorded above. Actionlint 1.7.12 and `git diff --check` passed;
 the scope input and its values were checked against the pinned action's
-`action.yml`. New Actions execution for this fix is pending.
+`action.yml`. The expanded-scope clean check passed at `6994a1e` on
+2026-11-14 ([job](https://github.com/Kakrl/MakeShift/actions/runs/43597152952/job/132453993053)); logs confirm runtime, development
+and unknown scopes. Vulnerable-update rejection remains unverified.
