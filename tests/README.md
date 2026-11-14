@@ -1219,7 +1219,7 @@ defect report is filed.
 | D22 | Medium | Calibration | Final depth sheet-check exception removed capture/Next controls. Reset collector/index on exception so all five depth positions can be retried. | `frontend/src/app/calibration/page.tsx` | [#178](https://github.com/Kakrl/MakeShift/issues/178) | Fixed in PR #177; local 6.2.3 regression passed; CI/merge pending |
 | D21 | High | Calibration | (Req 6.2, 1.1, 2.1) #148 replaced the reachable result capture with depth buttons and navigated before validation/save. Final depth capture now creates the primary result; completion retains its model and saves both records before navigation. 6.2.3's expected failures are restored as passing regressions. | `frontend/src/app/calibration/page.tsx` | [#162](https://github.com/Kakrl/MakeShift/issues/162) | Fix verified locally 2026-10-06; review/merge and physical check pending |
 | D24 | Medium | Audio | User camera-device testing of the initial #206 implementation found no live accompaniment and unstable clicks during page actions. | `frontend/src/app/audio/metronome.ts` | [#206](https://github.com/Kakrl/MakeShift/issues/206) | Worklet revision verified automatically; [user-reported behavior retest passed](manual/2026-10-25_MET-04.md), tested device commit 2cf30d0 confirmed |
-| D25 | Medium | MIDI / UI | Confirmed No, delete it plus accepted browser confirmation leaves the take accessible through Recordings; reload persistence not yet separately confirmed. | `frontend/src/app/midi/RecordingsLibraryPanel.tsx`, `frontend/src/app/share/SaveTakeDialog.tsx` | [#224](https://github.com/Kakrl/MakeShift/issues/224) | Open; user-reported manual reproduction, exact follow-up commit pending |
+| D25 | Medium | MIDI / UI | Confirmed No, delete it plus accepted browser confirmation leaves the take accessible through Recordings; reload persistence not yet separately confirmed. | `frontend/src/app/midi/RecordingsLibraryPanel.tsx`, `frontend/src/app/share/SaveTakeDialog.tsx` | [#224](https://github.com/Kakrl/MakeShift/issues/224) | Not reproduced on current main: panel and real-page regression tests ([LIB-05](verification_test_inventory.md)) pass; reporter retest on a current build pending |
 | D26 | Medium | Audio / UI | Visual count-in and recording boundary drift under delayed message handling; original physical offset remains unmeasured. | `frontend/src/app/page.tsx`, `frontend/src/app/audio/metronome.ts` | [#225](https://github.com/Kakrl/MakeShift/issues/225) | Fix verified automatically locally 2026-11-05; [user-reported device checklist passed at 5022324](manual/2026-11-05_MET-06.md); quantitative offset, review/merge pending; [verification](#count-in-synchronization-verification-225); original [MET-04 observation](manual/2026-10-25_MET-04.md), 300 BPM follow-up reported 2026-10-26 |
 | D27 | Medium | Calibration / UI | Moving the sheet after calibration leaves audio/record controls disabled while the marker overlay appears valid, without clear mismatch/recovery feedback. | `frontend/src/events/liveSession.ts`, `frontend/src/app/MarkerTrackingOverlay.tsx`, `frontend/src/app/page.tsx` | [#226](https://github.com/Kakrl/MakeShift/issues/226) | Open; overlaps broader recovery/alignment work in [#220](https://github.com/Kakrl/MakeShift/issues/220) |
 | D23 | Medium | Audio | (Req 2.4, related 2.2) User reports high-velocity strikes are not loud enough and wants more apparent velocity dynamics. Listening report 2026-10-14; cause and hardware verification pending. | `frontend/src/cv/fingerVelocity.ts`, `frontend/public/audio/synth.js` | [#209](https://github.com/Kakrl/MakeShift/issues/209) | DSP tuning implemented locally; [verification and listening limits](manual/2026-10-14_209-velocity.md); user confirmed audible velocity changes locally 2026-10-14; measured trials/chord distortion checks pending |
@@ -2308,6 +2308,21 @@ existing skip across 40 files. Lint and TypeScript passed. git diff --check
 passed. No production build or browser test was run for this test-only phase.
 
 ## Count-in synchronization verification (#225)
+
+### PR #266 merged-main verification (2026-11-13)
+
+Merged upstream main `4a8d2b4c3f460735a37317823689ab2f22478784` after review
+fix commit `9f62996`. The only textual conflict was the known-defects table:
+kept main's newer #224 non-reproduction status and this PR's #225 verification
+status. Product code and tests merged automatically and were verified together.
+
+Merged local checks passed: lint, TypeScript, 860 Vitest cases with one existing
+skip across 47 files, all 37 contrast pairs, production build and whitespace.
+Production Chromium 151.0.7922.34 passed `metronome.browser.mjs`, including the
+same-task pre-beat-4 stall and no stale callbacks; completion carried a boundary
+approximately 209.1 ms before callback receipt. Other browser suites and
+physical-device checks were not rerun for this merge. New Actions execution is
+pending; this local merge has not been pushed.
 
 ### PR #266 first-beat review fix (2026-11-13)
 
