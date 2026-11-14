@@ -2300,3 +2300,14 @@ the earlier inconclusive API probes. Harry elected to skip the controlled
 known-vulnerable update test; blocking behavior remains unverified and that
 acceptance criterion of #197 remains unmet. See the retained verification
 procedure in docs/dev_process.md and inventory entry DEP-01.
+
+### PR #269 dependency scopes review fix (2026-11-14)
+
+Explicitly set `fail-on-scopes: runtime, development, unknown` so the action
+also rejects introduced high/critical findings in development dependencies and
+dependencies without a classified scope. The earlier clean runs used the
+action's default runtime scope; they do not verify this expanded configuration.
+The controlled vulnerable-update rejection test remains skipped by author
+decision, as recorded above. Actionlint 1.7.12 and `git diff --check` passed;
+the scope input and its values were checked against the pinned action's
+`action.yml`. New Actions execution for this fix is pending.

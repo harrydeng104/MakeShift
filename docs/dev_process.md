@@ -224,7 +224,9 @@ We use a fork-and-pull-request workflow:
 targeting `main` when `frontend/package.json`, `frontend/package-lock.json`,
 or the workflow itself changes. GitHub's action compares the base/head
 dependency graphs and fails for introduced known **high or critical**
-vulnerabilities. Both direct and transitive changes can be reported. The path
+vulnerabilities in runtime, development and unknown scopes, explicitly configured
+with `fail-on-scopes: runtime, development, unknown`. Both direct and transitive
+changes can be reported. The path
 filter chooses which PRs run; it does not filter individual graph entries, so
 other manifests changed in the same PR may also contribute findings.
 
